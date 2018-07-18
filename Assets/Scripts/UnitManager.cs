@@ -3,16 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class UnitManager : Singleton<UnitManager> {
-    private readonly int GRID_DIM = 5;
-
-    private readonly int MODE_NONE = 0;
-    private readonly int MODE_CREATE = 1;
-    private readonly int MODE_CHANGE = 2;
-    private readonly int ATT_HARV = 0;
-    private readonly int ATT_DEF = 1;
-    private readonly int ATT_OFF = 2;
-    private readonly int MAX_ATT = 6;
-
+    
     private int currentMode = 0;
     private TileBehavior selectedTile;
     private List<int> selectedAtt;
@@ -21,7 +12,7 @@ public class UnitManager : Singleton<UnitManager> {
 
     public List<ResUnit> allUnits { get; private set; }
     public List<UnitGroup> allGroups { get; private set; }
-    private UnitGrid grid;
+    public UnitGrid grid { get; private set; }
 
 	// Use this for initialization
 	void Start () {
@@ -29,136 +20,31 @@ public class UnitManager : Singleton<UnitManager> {
         selectedAtt = new List<int>() { 0, 0, 0 };
         allUnits = new List<ResUnit>();
         allGroups = new List<UnitGroup>();
-        camera = Camera.main;
-        grid = new UnitGrid(GRID_DIM);
+        grid = new UnitGrid();
 	}
 	
 	// Update is called once per frame
 	void Update () {
-        
-        // determine the current mode
-        if (InputManager.CreateUnit()) {
-            Debug.Log("END: " + InputManager.CreateUnit() + " " + currentMode);
-            if (currentMode == MODE_NONE)
-            {
-                Ray ray = camera.ScreenPointToRay(Input.mousePosition);
-                RaycastHit hit;
-                if (Physics.Raycast(ray, out hit))
-                {
-                    GameObject other = hit.collider.gameObject;
-                    if (other.tag == Tags.BoardTile)
-                    {
-                        TileBehavior tb = other.GetComponent<TileBehavior>();
-                        if (tb.empty)
-                        {
-                            selectedTile = tb;
-                            EnterCreateMode();
-                        }
-                    }
-                }
-            }
-            // handle attribute selection end
-            else if (currentMode == MODE_CREATE)
-            {
-                Debug.Log(selectedAtt[ATT_HARV] + selectedAtt[ATT_DEF] + selectedAtt[ATT_OFF]);
-                if (selectedAtt[ATT_HARV] + selectedAtt[ATT_DEF] + selectedAtt[ATT_OFF] >= MAX_ATT)
-                {
-                    
-                    CullAlloc();
-                    ResUnit newUnit = selectedTile.SpawnUnit(new Vector3(selectedAtt[ATT_HARV], selectedAtt[ATT_DEF], selectedAtt[ATT_OFF]));
-                    IntegrateUnit(newUnit);
-                    currentMode = MODE_NONE;
-                }
-            }
-        }
-        else if (InputManager.ChangeUnit())
-        {
-            if (currentMode == MODE_NONE)
-                EnterChangeMode();
-        }
-
-        // handle attribute selection
-        if (currentMode == MODE_CREATE)
-        {
-            int attAlloc = 0;
-            bool inputReceived = false;
-            if (InputManager.Allocate_1())
-            {
-                attAlloc = 1;
-                inputReceived = true;
-            }
-            if (InputManager.Allocate_2())
-            {
-                attAlloc = 2;
-                inputReceived = true;
-            }
-            if (InputManager.Allocate_3())
-            {
-                attAlloc = 3;
-                inputReceived = true;
-            }
-            if (InputManager.Allocate_4())
-            {
-                attAlloc = 4;
-                inputReceived = true;
-            }
-            if (InputManager.Allocate_5())
-            {
-                attAlloc = 5;
-                inputReceived = true;
-            }
-            if (InputManager.Allocate_6())
-            {
-                attAlloc = 6;
-                inputReceived = true;
-            }
-            
-            if (inputReceived)
-            {
-                selectedAtt.Insert(0, attAlloc);
-                CullAlloc();
-            }
-        }
+       
 	}
 
-    private void EnterCreateMode()
-    {
-        Debug.Log("ENTERED CREATE");
-        currentMode = MODE_CREATE;
-        selectedAtt = new List<int>() { 0, 0, 0 };
-        currentAtt = 0;
-    }
-
-    private void EnterChangeMode()
-    {
-
-    }
-
-    // truncates attribute allocation so selectedAtt's magnitude is 6
-    private void CullAlloc()
-    {
-        selectedAtt[0] = Mathf.Clamp(selectedAtt[ATT_HARV], 0, MAX_ATT);
-        selectedAtt[1] = Mathf.Clamp(selectedAtt[ATT_DEF], 0, MAX_ATT - selectedAtt[ATT_HARV]);
-        selectedAtt[2] = Mathf.Clamp(selectedAtt[ATT_OFF], 0, MAX_ATT - selectedAtt[ATT_HARV] - selectedAtt[ATT_DEF]);
+    public void CreateUnit(Vector3 attributes, TileBehavior spawnTile, PlayerController owner) {
+        ResUnit newUnit = spawnTile.SpawnUnit(attributes, owner);
+        IntegrateUnit(newUnit);
+        
     }
 
     private void IntegrateUnit(ResUnit unit)
     {
         Debug.Log("INTEGRATING");
         VectorHex posHex = unit.posHex;
-        List<ResUnit> neighbors = grid.NeighborsOf(posHex);
-        List<UnitGroup> neighborGroups = new List<UnitGroup>();
-
-        foreach (ResUnit neighbor in neighbors)
-        {
-            if (!neighborGroups.Contains(neighbor.group))
-                neighborGroups.Add(neighbor.group);
-        }
+        Debug.Log("ID: " + unit.owner.playerID);
+        List<UnitGroup> neighborGroups = grid.GetPosNeighborGroups(posHex, distinguishPlayers:true, playerQueried:unit.owner.playerID, ignoreOwnGroup:true, invertPlayerSelection:false);
 
         // if there are no neighbors
         if (neighborGroups.Count < 1)
         {
-            UnitGroup newGroup = new UnitGroup();
+            UnitGroup newGroup = new UnitGroup(unit.owner);
             newGroup.AddUnit(unit);
             allGroups.Add(newGroup);
         }
@@ -182,6 +68,49 @@ public class UnitManager : Singleton<UnitManager> {
 
         grid.PlaceUnit(unit);
         allUnits.Add(unit);
+        TerritoryUpdateGroup(unit);
+
         UIManager.Instance.UpdateModeUI(true);
+    }
+
+    // destroys enemy units within range of group specified by unit
+    // the algorithm first loops through all affected units and removes ones that do not survive. Then it 
+    // repeats the process with the survived units and continues to do so until no units are removed or none are left
+    private void TerritoryUpdateGroup(ResUnit groupUnit) {
+        List<UnitGroup> enemyGroups = grid.GridSearchGroupNeighborGroups(groupUnit.posHex);
+        
+        for (int i = enemyGroups.Count - 1; i >= 0; i--) {
+            bool unitRemoved = false;
+            do {
+                for (int j = enemyGroups[i].units.Count - 1; j >= 0; j--) {
+                    ResUnit enemy = enemyGroups[i].units[j];
+                    bool enemySurvived = EndureUnit(enemy);
+                    if (!enemySurvived) {
+                        RemoveUnit(enemy);
+                    }
+                }
+            } while (unitRemoved && enemyGroups[i].units.Count > 0);
+        }
+        
+    }
+
+    // endures the unit through onslaught of enemies. Returns true upon survival, otherwise false.
+    private bool EndureUnit(ResUnit enduree) {
+        // select all groups that are not under control of the enduree's owner
+        List<UnitGroup> neighborGroups = grid.GetPosNeighborGroups(enduree.posHex, distinguishPlayers:true, playerQueried:enduree.owner.playerID, ignoreOwnGroup:true, invertPlayerSelection:true);
+        int sumOff = 0;
+        foreach (UnitGroup neighborGroup in neighborGroups)
+            sumOff += neighborGroup.groupOffense;
+
+        return sumOff <= enduree.group.groupDefense;
+    }
+
+    private void RemoveUnit(ResUnit removedUnit) {
+        allUnits.Remove(removedUnit);
+        UnitGroup removedUnitGroup = removedUnit.group;
+        removedUnit.tile.RemoveUnit();
+        if (removedUnitGroup.empty) {
+            allGroups.Remove(removedUnitGroup);
+        }
     }
 }

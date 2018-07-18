@@ -11,14 +11,14 @@ public class TileBehavior : MonoBehaviour {
     public VectorHex posHex;
 
     private Renderer rend;
-    private GameObject unit;
+    private ResUnit unit;
     
 
     public bool empty { get; private set; }
 
 	// Use this for initialization
 	void Start () {
-        rend = GetComponent<Renderer>();
+        rend = GetComponentInChildren<Renderer>();
         rend.material = matIdle;
         empty = true;
 	}
@@ -38,21 +38,25 @@ public class TileBehavior : MonoBehaviour {
         rend.material = matIdle;
     }
 
-    public ResUnit SpawnUnit(Vector3 attributes)
+    public ResUnit SpawnUnit(Vector3 attributes, PlayerController owner)
     {
         GameObject newUnit = Instantiate(pf_ResUnit, transform.parent.transform);
         newUnit.transform.localPosition = new Vector3(0f, 0.5f, 0f);
         ResUnit ru = newUnit.GetComponent<ResUnit>();
-        ru.Initialize(attributes, posHex);
+        ru.Initialize(attributes, this, owner);
 
         if (unit != null)
-        {
             Destroy(unit);
-            unit = newUnit;
-        }
 
+        unit = ru;
         empty = false;
 
         return ru;
+    }
+
+    public void RemoveUnit() {
+        unit.group.RemoveUnit(unit);
+        unit = null;
+        empty = true;
     }
 }

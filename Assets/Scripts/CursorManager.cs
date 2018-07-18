@@ -23,9 +23,16 @@ public class CursorManager : MonoBehaviour {
                 Debug.Log(other.tag);
                 switch(other.tag)
                 {
-                    case "board_tile":
-                        TileBehavior tb = other.GetComponent<TileBehavior>();
-                        tb.SpawnUnit(Vector3.zero);
+                    case "res_unit":
+                        //List<UnitGroup> neighbors = UnitManager.Instance.grid.GetPosNeighborGroups(other.GetComponentInParent<ResUnit>().posHex, distinguishPlayers: true, playerQueried: other.GetComponentInParent<ResUnit>().owner.playerID, ignoreOwnGroup: true, invertPlayerSelection: true);
+                        List<UnitGroup> neighbors = UnitManager.Instance.grid.GridSearchGroupNeighborGroups(other.GetComponentInParent<ResUnit>().posHex);
+                        List<VectorHex> posNeighbors = new List<VectorHex>();
+                        foreach (UnitGroup group in neighbors) {
+                            foreach (ResUnit unit in group.units) {
+                                posNeighbors.Add(unit.posHex);
+                            }
+                        }
+                        UIManager.Instance.UpdateMarkers(posNeighbors);
                         break;
                     default:
                         break;

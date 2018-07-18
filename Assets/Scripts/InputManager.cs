@@ -15,6 +15,10 @@ public static class InputManager {
         return Input.GetButtonDown("change_unit");
     }
 
+    public static bool Allocate_0() {
+        return Input.GetButtonDown("allocate_0");
+    }
+
     public static bool Allocate_1()
     {
         return Input.GetButtonDown("allocate_1");
@@ -58,5 +62,9 @@ public static class InputManager {
     public static bool InfoDefense()
     {
         return Input.GetButton("info_defense");
+    }
+
+    public static bool SwitchPlayer() {
+        return Input.GetButtonDown("switch_player");
     }
 }

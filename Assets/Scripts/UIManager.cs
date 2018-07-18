@@ -9,10 +9,12 @@ public class UIManager : Singleton<UIManager> {
 
     public int labelPoolSize = 100;
     public GameObject pf_Label;
+    public GameObject pf_Marker;
 
     private int previousMode = 0;
     private int currentMode = 0;
     private List<GameObject> labelPool;
+    private GameObject[,] markerPool;
 
 	// Use this for initialization
 	void Start () {
@@ -24,7 +26,28 @@ public class UIManager : Singleton<UIManager> {
             label.SetActive(false);
             labelPool.Add(label);
         }
-	}
+
+        
+    }
+
+    // Remove these initialization functions later. Reduce the coupling in these start function. Possibly handle them in a dedicated initialization script?
+    public void Initialize() {
+        markerPool = new GameObject[UnitGrid.GRID_DIM * 2 - 1, UnitGrid.GRID_DIM * 2 - 1];
+
+        for (int i = 0; i < BoardManager.Instance.tiles.Count; i++) {
+
+            GameObject tile = BoardManager.Instance.tiles[i];
+            Debug.Log(tile);
+            VectorHex tilePos = tile.GetComponentInChildren<TileBehavior>().posHex;
+            VectorHex offsetPos = UnitGrid.OffsetForGrid(tilePos);
+            GameObject marker = Instantiate(pf_Marker, transform);
+            markerPool[offsetPos.q, offsetPos.r] = marker;
+            marker.SetActive(true);
+            marker.transform.position = new Vector3(tile.transform.position.x, 1.5f, tile.transform.position.z);
+            marker.GetComponentInChildren<Image>().color = Color.grey;
+            marker.GetComponentInChildren<Text>().text = "" + tilePos.q + " " + tilePos.r;
+        }
+    }
 	
 	// Update is called once per frame
 	void Update () {
@@ -123,9 +146,23 @@ public class UIManager : Singleton<UIManager> {
         }
     }
 
+    public void UpdateMarkers(List<VectorHex> posHighlighted) {
+        foreach (GameObject tile in BoardManager.Instance.tiles) {
+            TileBehavior tb = tile.GetComponentInChildren<TileBehavior>();
+            VectorHex offsetPos = UnitGrid.OffsetForGrid(tb.posHex);
+            GameObject marker = markerPool[offsetPos.q, offsetPos.r];
+            if (posHighlighted.Contains(tb.posHex))
+                marker.GetComponentInChildren<Image>().color = Color.cyan;
+            else
+                marker.GetComponentInChildren<Image>().color = Color.grey;
+
+        }
+    }
+
     private void DisableLabels()
     {
         foreach (GameObject label in labelPool)
             label.SetActive(false);
     }
+
 }

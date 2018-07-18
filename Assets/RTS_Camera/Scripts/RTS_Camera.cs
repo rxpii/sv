@@ -208,7 +208,7 @@ namespace RTS_Cam
         {
             if (useKeyboardInput)
             {
-                Vector3 desiredMove = new Vector3(KeyboardInput.x, 0, KeyboardInput.y);
+                Vector3 desiredMove = new Vector3(KeyboardInput.x, m_Transform.position.y, KeyboardInput.y);
 
                 desiredMove *= keyboardMovementSpeed;
                 desiredMove *= Time.deltaTime;
@@ -270,8 +270,10 @@ namespace RTS_Cam
             if(distanceToGround != targetHeight)
                 difference = targetHeight - distanceToGround;
 
-            m_Transform.position = Vector3.Lerp(m_Transform.position, 
-                new Vector3(m_Transform.position.x, targetHeight + difference, m_Transform.position.z), Time.deltaTime * heightDampening);
+            Camera.main.orthographicSize = targetHeight + difference;
+
+            //m_Transform.position = Vector3.Lerp(m_Transform.position, 
+            //    new Vector3(m_Transform.position.x, targetHeight + difference, m_Transform.position.z), Time.deltaTime * heightDampening);
         }
 
         /// <summary>

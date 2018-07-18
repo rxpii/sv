@@ -5,7 +5,10 @@ using UnityEngine.UI;
 
 public class ResUnit : MonoBehaviour {
 
-    private static readonly int MAX_ATT = 6;
+    public static readonly int ATT_HARV = 0;
+    public static readonly int ATT_DEF = 1;
+    public static readonly int ATT_OFF = 2;
+    public static readonly int MAX_ATT = 6;
 
     // unit attributes
     public int attHarvest { get; private set; }
@@ -13,20 +16,24 @@ public class ResUnit : MonoBehaviour {
     public int attOffense { get; private set; }
 
     public VectorHex posHex;
+    public TileBehavior tile;
     public UnitGroup group;
-    
+    public PlayerController owner;
+
     private Renderer rend;
 
 	// Use this for initialization
 	void Start () {
         
 	}
-	
-    public void Initialize(Vector3 attributes, VectorHex posHex)
+
+    public void Initialize(Vector3 attributes, TileBehavior tile, PlayerController owner)
     {
         rend = GetComponentInChildren<Renderer>();
         SetAttributes(attributes);
-        this.posHex = posHex;
+        this.tile = tile;
+        this.posHex = tile.posHex;
+        this.owner = owner;
         
     }
 
@@ -47,5 +54,9 @@ public class ResUnit : MonoBehaviour {
     {
         this.group = group;
         rend.material.color = group.groupColor;
+    }
+
+    public void UnsubscribeFromGroup() {
+        Destroy(gameObject);
     }
 }
