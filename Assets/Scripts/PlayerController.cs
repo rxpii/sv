@@ -23,4 +23,13 @@ public class PlayerController {
     private void PerformChange() {
 
     }
+
+    public override bool Equals(object obj) {
+        if (obj == null || GetType() != obj.GetType())
+            return false;
+
+        PlayerController other = (PlayerController)obj;
+
+        return playerID == other.playerID;
+    }
 }

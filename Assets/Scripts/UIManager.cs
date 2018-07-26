@@ -10,6 +10,7 @@ public class UIManager : Singleton<UIManager> {
     public int labelPoolSize = 100;
     public GameObject pf_Label;
     public GameObject pf_Marker;
+    public Text debugText;
 
     private int previousMode = 0;
     private int currentMode = 0;
@@ -69,6 +70,7 @@ public class UIManager : Singleton<UIManager> {
         }
 
         UpdateModeUI();
+        UpdateDebugUI();
 	}
 
     public void UpdateModeUI(bool bypassPreviousCheck=false)
@@ -84,11 +86,13 @@ public class UIManager : Singleton<UIManager> {
         {
             
             case (int) Mode.AllAtt:
+                Debug.Log("COUNT: " + UnitManager.Instance.allUnits.Count);
                 for (int i = 0; i < UnitManager.Instance.allUnits.Count; i++)
                 {
                     ResUnit unit = UnitManager.Instance.allUnits[i];
+                    Debug.Log("UNIT LABEL: " + i + " " + unit);
                     labelPool[i].transform.position = new Vector3(unit.transform.position.x, 1.5f, unit.transform.position.z);
-                    labelPool[i].GetComponentInChildren<Image>().color = Color.gray;
+                    labelPool[i].GetComponentInChildren<Image>().color = new Color(0f, 0f, 0f, 0.5f);
                     labelPool[i].GetComponentInChildren<Text>().text = unit.attHarvest + " | " + unit.attDefense + " | " + unit.attOffense;
                     labelPool[i].SetActive(true);
                 }
@@ -144,6 +148,18 @@ public class UIManager : Singleton<UIManager> {
             default:
                 break;
         }
+    }
+
+    public void UpdateDebugUI() {
+        string debugMsg = "";
+        debugMsg = debugMsg + "current player: " + PlayerInteractionManager.Instance.currentPlayer.playerID + "\n";
+        if (PlayerInteractionManager.Instance.selectedAtt != null) {
+            debugMsg = debugMsg + "att harv: " + PlayerInteractionManager.Instance.selectedAtt[0] + "\n";
+            debugMsg = debugMsg + "att def: " + PlayerInteractionManager.Instance.selectedAtt[1] + "\n";
+            debugMsg = debugMsg + "att off: " + PlayerInteractionManager.Instance.selectedAtt[2] + "\n";
+        }
+
+        debugText.text = debugMsg;
     }
 
     public void UpdateMarkers(List<VectorHex> posHighlighted) {

@@ -28,12 +28,41 @@ public class UnitManager : Singleton<UnitManager> {
        
 	}
 
-    public void CreateUnit(Vector3 attributes, TileBehavior spawnTile, PlayerController owner) {
+    public ResUnit CreateUnitSingle(Vector3 attributes, TileBehavior spawnTile, PlayerController owner) {
+        // remove old tile
+        if (!spawnTile.empty) {
+            /*if (allUnits.Contains(spawnTile.unit)) {
+                RemoveUnit(spawnTile.unit);
+            }*/
+            if (!spawnTile.unit.owner.Equals(owner)) {
+                return null;
+            }
+            spawnTile.unit.group.ChangeUnitAtt(spawnTile.unit, attributes);
+            spawnTile.unit.SetAttributes(attributes);
+            return spawnTile.unit;
+        }
         ResUnit newUnit = spawnTile.SpawnUnit(attributes, owner);
         IntegrateUnit(newUnit);
-        
+        return newUnit;
     }
 
+    public void CreateUnitMultiple(Vector3 attributes, List<TileBehavior> spawnTiles, PlayerController owner) {
+        foreach (TileBehavior spawnTile in spawnTiles) {
+            ResUnit newUnit = CreateUnitSingle(attributes, spawnTile, owner);
+            
+        }
+        foreach (PlayerController player in PlayerInteractionManager.Instance.players) {
+            if (!player.Equals(owner)) {
+                TerritoryUpdateGroup(player);
+            }
+        }
+
+        TerritoryUpdateGroup(owner);
+
+        UIManager.Instance.UpdateModeUI(bypassPreviousCheck:true);
+    }
+
+    // places new unit within nearby group if one exists, aggregating multiple should it bridge different groups.
     private void IntegrateUnit(ResUnit unit)
     {
         Debug.Log("INTEGRATING");
@@ -68,30 +97,38 @@ public class UnitManager : Singleton<UnitManager> {
 
         grid.PlaceUnit(unit);
         allUnits.Add(unit);
-        TerritoryUpdateGroup(unit);
-
-        UIManager.Instance.UpdateModeUI(true);
     }
 
-    // destroys enemy units within range of group specified by unit
-    // the algorithm first loops through all affected units and removes ones that do not survive. Then it 
-    // repeats the process with the survived units and continues to do so until no units are removed or none are left
-    private void TerritoryUpdateGroup(ResUnit groupUnit) {
-        List<UnitGroup> enemyGroups = grid.GridSearchGroupNeighborGroups(groupUnit.posHex);
-        
-        for (int i = enemyGroups.Count - 1; i >= 0; i--) {
-            bool unitRemoved = false;
-            do {
-                for (int j = enemyGroups[i].units.Count - 1; j >= 0; j--) {
-                    ResUnit enemy = enemyGroups[i].units[j];
-                    bool enemySurvived = EndureUnit(enemy);
-                    if (!enemySurvived) {
-                        RemoveUnit(enemy);
+    // destroys the players units that do not survive the enemy groups
+    // does not affect the units not controlled by the given player
+    private void TerritoryUpdateGroup(PlayerController player) {
+        // loop through all groups
+        for (int i = allGroups.Count - 1; i >= 0; i--) {
+            UnitGroup group = allGroups[i];
+
+            // check if they are owned by the player
+            if (group.owner.Equals(player)) {
+
+                // reevaluate for new dead units if a unit in the group was previously removed
+                bool unitRemoved = false;
+                do {
+                    unitRemoved = false;
+                    for (int j = group.units.Count - 1; j >= 0; j--) {
+                        ResUnit unit = group.units[j];
+                        bool unitSurvived = EndureUnit(unit);
+                        if (!unitSurvived) {
+                            RemoveUnit(unit);
+                            unitRemoved = true;
+                        }
                     }
+                } while (unitRemoved && !group.empty);
+
+                // remove the group if all units within it are dead
+                if (group.empty) {
+                    allGroups.Remove(group);
                 }
-            } while (unitRemoved && enemyGroups[i].units.Count > 0);
+            }
         }
-        
     }
 
     // endures the unit through onslaught of enemies. Returns true upon survival, otherwise false.
@@ -99,18 +136,25 @@ public class UnitManager : Singleton<UnitManager> {
         // select all groups that are not under control of the enduree's owner
         List<UnitGroup> neighborGroups = grid.GetPosNeighborGroups(enduree.posHex, distinguishPlayers:true, playerQueried:enduree.owner.playerID, ignoreOwnGroup:true, invertPlayerSelection:true);
         int sumOff = 0;
-        foreach (UnitGroup neighborGroup in neighborGroups)
+        foreach (UnitGroup neighborGroup in neighborGroups) {
+            
             sumOff += neighborGroup.groupOffense;
+        }
 
         return sumOff <= enduree.group.groupDefense;
     }
 
     private void RemoveUnit(ResUnit removedUnit) {
         allUnits.Remove(removedUnit);
+        grid.RemoveUnit(removedUnit);
         UnitGroup removedUnitGroup = removedUnit.group;
+        removedUnit.group.RemoveUnit(removedUnit);
         removedUnit.tile.RemoveUnit();
-        if (removedUnitGroup.empty) {
-            allGroups.Remove(removedUnitGroup);
-        }
+        Destroy(removedUnit.gameObject);
+    }
+
+    private void ChangeGroup(ResUnit changingUnit, UnitGroup newGroup) {
+        changingUnit.group.RemoveUnit(changingUnit);
+        newGroup.AddUnit(changingUnit);
     }
 }

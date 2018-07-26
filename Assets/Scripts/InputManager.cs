@@ -5,7 +5,27 @@ using UnityEngine;
 // manages player inputs. Handles the unit attribute allocation system
 public static class InputManager {
 
-	public static bool CreateUnit()
+    public static bool PrimaryMouseButtonDown() {
+        return Input.GetMouseButtonDown(0);
+    }
+
+    public static bool PrimaryMouseButtonUp() {
+        return Input.GetMouseButtonUp(0);
+    }
+
+    public static bool PrimaryMouseButton() {
+        return Input.GetMouseButton(0);
+    }
+
+    public static bool Deselect() {
+        return Input.GetButtonDown("deselect");
+    }
+
+    public static bool SelectionAdd() {
+        return Input.GetButton("selection_add");
+    }
+
+    public static bool CreateUnit()
     {
         return Input.GetButtonDown("create_unit");
     }

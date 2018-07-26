@@ -25,6 +25,10 @@ public class UnitGrid{
         grid[offsetPos.q, offsetPos.r] = unit;
     }
 
+    public void RemoveUnit(ResUnit unit) {
+        RemoveAt(unit.posHex);
+    }
+
     public ResUnit GetAt(VectorHex posHex)
     {
         VectorHex offsetPos = OffsetForGrid(posHex);

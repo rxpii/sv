@@ -42,4 +42,8 @@ public class VectorHex {
 
         return (q == other.q) && (r == other.r); 
     }
+
+    public override string ToString() {
+        return "q: " + q + " r: " + r;
+    }
 }

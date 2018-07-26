@@ -85,4 +85,15 @@ public class UnitGroup {
         groupDefense -= removedUnit.attDefense;
         groupOffense -= removedUnit.attOffense;
     }
+
+    // Call before actually setting the changedUnit's new att
+    public void ChangeUnitAtt(ResUnit changedUnit, Vector3 newAtt) {
+        groupHarvest -= changedUnit.attHarvest;
+        groupDefense -= changedUnit.attDefense;
+        groupOffense -= changedUnit.attOffense;
+
+        groupHarvest += (int) newAtt.x;
+        groupDefense += (int)newAtt.y;
+        groupOffense += (int)newAtt.z;
+    }
 }

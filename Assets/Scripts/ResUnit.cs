@@ -57,6 +57,8 @@ public class ResUnit : MonoBehaviour {
     }
 
     public void UnsubscribeFromGroup() {
-        Destroy(gameObject);
+        if (group != null) {
+            this.group = null;
+        }
     }
 }
